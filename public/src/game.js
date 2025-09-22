@@ -818,6 +818,12 @@ class MainScene extends Phaser.Scene {
     // clear & draw base map (if any background drawn earlier, keep)
     this.graphics.clear();
 
+    // draw water rects (rivers/coasts/lakes) before roads
+    if (this.waterRects && this.waterRects.length) {
+      this.graphics.fillStyle(0x1565c0, 1);
+      for (const r of this.waterRects) this.graphics.fillRect(r.x, r.y, r.w, r.h);
+    }
+
   // draw roads
     for (const seg of this.roadSegments) {
       const color = seg.blocked ? 0xef5350 : 0x7fb3ff;
@@ -892,7 +898,7 @@ class MainScene extends Phaser.Scene {
       }
     }
 
-    // overlay de contaminación (si está activado)
+  // overlay de contaminación (si está activado)
     if (this.showPollution && this.pollution.length) {
       for (const p of this.pollution) {
         const r = Math.max(12, p.value * 14);

@@ -46,19 +46,22 @@ const closeUpgrade = document.getElementById('closeUpgrade');
 
 
 function updateUnlocks(u){
-const parts = [];
-if(u.bridges) parts.push('Puentes');
-if(u.roundabouts) parts.push('Rotondas');
-unlocks.textContent = 'Desbloqueos: ' + (parts.length? parts.join(', '): 'Ninguno');
+	if (!unlocks) return;
+	const parts = [];
+	if(u.bridges) parts.push('Puentes');
+	if(u.roundabouts) parts.push('Rotondas');
+	unlocks.textContent = 'Desbloqueos: ' + (parts.length? parts.join(', '): 'Ninguno');
 }
 
 
 window.onUnlocksUpdated = updateUnlocks;
 
 
-advanceBtn.addEventListener('click', ()=>{
-if(window.MC) window.MC.advanceWeek();
-});
+if (advanceBtn) {
+	advanceBtn.addEventListener('click', ()=>{
+		if(window.MC) window.MC.advanceWeek();
+	});
+}
 
 
 toggleOne.addEventListener('click', ()=>{
