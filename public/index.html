@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Motor City - A* Ready</title>
+<style>
+body{margin:0;font-family:Arial,Helvetica,sans-serif;background:#0b1220;color:#e6eef8}
+#gameContainer{width:100vw;height:100vh;display:block}
+#ui{position:absolute;left:10px;top:10px;z-index:20}
+button{display:block;margin-bottom:6px;padding:8px 10px;border-radius:6px;border:none;cursor:pointer}
+.panel{background:rgba(255,255,255,0.06);padding:10px;border-radius:8px}
+/* bottom build bar */
+#buildBar{position:absolute;left:50%;transform:translateX(-50%);bottom:10px;z-index:20;display:flex;gap:8px;background:rgba(255,255,255,0.06);padding:8px 10px;border-radius:10px}
+#buildBar button{margin:0;padding:8px 10px}
+#buildBar .locked{opacity:0.4;pointer-events:none}
+/* visualize no-build left area */
+#safeOverlay{position:absolute;left:0;top:0;bottom:0;width:260px;background:rgba(255,255,255,0.06);z-index:10;pointer-events:none}
+</style>
+</head>
+<body>
+<div id="gameContainer"></div>
+<div id="safeOverlay"></div>
+
+
+<div id="ui" class="panel">
+<div id="time">Semana 1 — Día: Lunes</div>
+<div id="vehiclesCount">Autos: 0</div>
+<div id="visitorsCount">Visitas activas: 0</div>
+<div id="score">Puntaje: 0</div>
+<div id="alerts" style="margin-top:6px;color:#ffcccb"></div>
+<button id="toggleOneWay">Alternar Una Vía: OFF</button>
+<button id="togglePlaceMode">Modo: Colocar Carretera</button>
+<label style="display:block;margin-top:6px">Carriles: 
+  <select id="lanesSelect">
+    <option value="1">1</option>
+    <option value="2">2</option>
+    <option value="3">3</option>
+  </select>
+</label>
+<label style="display:block;margin-top:6px">Prioridad: 
+  <select id="prioritySelect">
+    <option value="1">Normal</option>
+    <option value="2">Arteria</option>
+    <option value="3">Autopista</option>
+  </select>
+</label>
+<label style="display:block;margin-top:6px">
+  <input type="checkbox" id="trafficParticles"/> Densidad con partículas
+</label>
+<label style="display:block;margin-top:6px">
+  <input type="checkbox" id="showPollutionGame"/> Ver contaminación (juego)
+</label>
+<button id="placeCity">Colocar Ciudad</button>
+<button id="placeHouse">Colocar Casa (color ciudad seleccionada)</button>
+<button id="save">Guardar Ciudad</button>
+<button id="load">Cargar Ciudad</button>
+<button id="startBtn">Empezar</button>
+<button id="switchToSim">MotorCity Simulator</button>
+<script>
+  document.getElementById('startBtn').addEventListener('click', () => {
+    window.startSimulation('llanura'); // o 'rios' o 'costas'
+  });
+  document.getElementById('switchToSim').addEventListener('click', () => {
+    if (window.MotorCityGame) { try { window.MotorCityGame.destroy(true); } catch(e) {} }
+    if (window.createMotorCitySimulator) window.createMotorCitySimulator();
+  });
+</script>
+</div>
+
+<!-- Bottom Build Bar (items/tools) -->
+<div id="buildBar" class="panel">
+  <button id="itemDoor">Puerta</button>
+  <button id="itemRoad">Carretera</button>
+  <button id="itemBridge" class="locked">Puente</button>
+  <button id="itemRoundabout" class="locked">Rotonda</button>
+  <button id="itemHighway" class="locked">Autopista</button>
+  <button id="itemForest">Bosque</button>
+  <button id="itemLake">Lago</button>
+  <button id="itemBulldozer">Bulldozer</button>
+  <button id="itemSave">Guardar</button>
+  <button id="itemLoad">Cargar</button>
+  <button id="itemStart">Inicio</button>
+</div>
+
+<!-- Week Upgrade Choice Panel -->
+<div id="upgradePanel" class="panel" style="position:absolute;left:50%;transform:translateX(-50%);top:80px;z-index:25;display:none">
+  <div style="margin-bottom:6px"><strong>Nueva mejora semanal</strong></div>
+  <div style="display:flex;gap:8px;flex-wrap:wrap">
+    <button id="pickHighway">Desbloquear Autopista</button>
+    <button id="pickRoundabout">Desbloquear Rotonda</button>
+    <button id="pickBridge">Desbloquear Puente</button>
+  </div>
+  <div style="margin-top:6px;font-size:12px;color:#cfd8dc">Elige una para esta semana.</div>
+  <button id="closeUpgrade" style="margin-top:6px">Cerrar</button>
+</div>
+
+<!-- Simulator side panel -->
+<div id="simPanel" class="panel" style="position:absolute;right:10px;top:10px;z-index:20;display:none">
+  <div><strong>MotorCity Simulator</strong></div>
+  <label style="display:block;margin-top:6px">Impuesto (%):
+    <input id="simTax" type="number" min="0" max="25" step="0.5" value="8" style="width:70px" />
+  </label>
+  <div style="margin-top:6px">Herramientas:</div>
+  <button id="simToolPower">Planta de Energía</button>
+  <button id="simToolWater">Torre de Agua</button>
+  <button id="simToolRoad">Carretera (grid)</button>
+  <button id="simToolBulldozer">Bulldozer</button>
+  <button id="simToolZoneR">Zona Residencial</button>
+  <button id="simToolZoneC">Zona Comercial</button>
+  <button id="simToolZoneI">Zona Industrial</button>
+  <label style="display:block;margin-top:6px">Tamaño brocha:
+    <select id="simBrush">
+      <option value="1">1x1</option>
+      <option value="2">2x2</option>
+      <option value="3">3x3</option>
+      <option value="4">4x4</option>
+    </select>
+  </label>
+  <label style="display:block;margin-top:6px">
+    <input type="checkbox" id="simPollution" /> Ver contaminación
+  </label>
+  <div style="display:flex;gap:8px;margin-top:6px">
+    <button id="simSave">Guardar</button>
+    <button id="simLoad">Cargar</button>
+  </div>
+  <div id="simInfo" style="margin-top:6px;color:#a5d6a7"></div>
+</div>
+
+
+<!-- Phaser (CDN) -->
+<script src="https://cdn.jsdelivr.net/npm/phaser@3/dist/phaser.min.js"></script>
+
+
+<!-- Firebase compat (CDN) -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+
+
+<script src="src/firebase-config.js"></script>
+<script src="src/game.js"></script>
+<script src="src/ui.js"></script>
+<script src="src/simulator.js"></script>
+</body>
+</html>
