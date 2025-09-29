@@ -98,14 +98,15 @@ class Vehicle {
     this.showRoute = !!opts.showRoute;
   this.waitingForNode = null;
   this.releaseNodeAtIndex = null;
-    // sprite
-    const p0 = this.pathPoints[0] || { x: 0, y: 0 };
-    this.sprite = scene.add.rectangle(p0.x, p0.y, 12, 8, this.color).setDepth(6);
-    // route graphics (persistent while active)
-    this.routeGraphics = scene.add.graphics().setDepth(4);
-    this.drawRoute();
-    const first = this.segmentRanges[0];
-    if (first && first.seg) first.seg.vehCount = (first.seg.vehCount || 0) + 1;
+  // sprite: use directional car pixelart
+  const p0 = this.pathPoints[0] || { x: 0, y: 0 };
+  this.carDirection = 'right';
+  this.sprite = scene.add.image(p0.x, p0.y, 'car_auto_right').setDisplaySize(32, 32).setDepth(6);
+  // route graphics (persistent while active)
+  this.routeGraphics = scene.add.graphics().setDepth(4);
+  this.drawRoute();
+  const first = this.segmentRanges[0];
+  if (first && first.seg) first.seg.vehCount = (first.seg.vehCount || 0) + 1;
   }
 
   flattenSegments(segs) {
@@ -181,7 +182,17 @@ class Vehicle {
     }
     const step = this.speed * factor * dt / 1000;
     const newX = this.sprite.x + dirx * step, newY = this.sprite.y + diry * step;
-    this.sprite.rotation = Math.atan2(diry, dirx);
+    // Set car sprite direction based on movement
+    let newDirection = this.carDirection;
+    if (Math.abs(dirx) > Math.abs(diry)) {
+      newDirection = dirx > 0 ? 'right' : 'left';
+    } else {
+      newDirection = diry > 0 ? 'down' : 'up';
+    }
+    if (newDirection !== this.carDirection) {
+      this.carDirection = newDirection;
+      this.sprite.setTexture('car_auto_' + newDirection);
+    }
     const remainToB = Math.hypot(b.x - newX, b.y - newY);
     if (step >= Math.hypot(b.x - this.sprite.x, b.y - this.sprite.y)) {
       // moved to the point
@@ -375,7 +386,13 @@ class MainScene extends Phaser.Scene {
     this._pollutionAccum = 0;
   }
 
-  preload() {}
+  preload() {
+    // Preload directional car sprites
+    this.load.image('car_auto_up', 'assets/pixelart/car_auto_arriba.png');
+    this.load.image('car_auto_down', 'assets/pixelart/car_auto_abajo.png');
+    this.load.image('car_auto_left', 'assets/pixelart/car_auto_izquierda.png');
+    this.load.image('car_auto_right', 'assets/pixelart/car_auto_derecha.png');
+  }
 
   create() {
     this.graphics = this.add.graphics();
